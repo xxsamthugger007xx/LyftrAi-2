@@ -213,7 +213,7 @@ export default function App() {
         <div className="brand">
           <div className="mark"><Svg name="paw" size={20} /></div>
           <div>
-            <h1>Wolf Chat</h1>
+            <h1>Lyftr Chat</h1>
             <p>AI assistant</p>
           </div>
           <button className="icon-btn side-close" onClick={() => setPanelOpen(false)} aria-label="Close panel"><Svg name="close" /></button>
@@ -257,7 +257,7 @@ export default function App() {
       <section className="main">
         <header className="mobilebar">
           <button className="icon-btn" onClick={() => setPanelOpen(true)} aria-label="Open panel"><Svg name="menu" size={20} /></button>
-          <strong>Wolf Chat</strong>
+          <strong>Lyftr Chat</strong>
           <span className={`service mini ${service}`} role="status"><i className="svc-dot" /> {service === "ready" ? "Ready" : service === "connecting" ? "Connecting…" : "Unreachable"}</span>
         </header>
 
