@@ -3,8 +3,8 @@
 React + FastAPI + LiteLLM + SQLite.
 
 ## 1. Live URLs
-- Frontend: _TODO: add after deploy_
-- Backend: _TODO: add after deploy_ (`/health`)
+- Frontend: https://lyftr-ai-2.vercel.app
+- Backend: https://lyftr-chat-backend-2.onrender.com ([`/health`](https://lyftr-chat-backend-2.onrender.com/health))
 
 > The backend runs on Render's free tier: it sleeps after ~15 min idle (first request can take ~50 s) and, without a persistent disk, SQLite history is reset on restart/redeploy. Locally with Docker the `/data` volume persists history.
 
