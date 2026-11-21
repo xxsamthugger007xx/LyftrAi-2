@@ -9,24 +9,22 @@ const HEALTH_TIMEOUT_MS = 90_000;
 const newSessionId = () =>
   "s-" + (crypto.randomUUID ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14));
 
-const SUGGESTIONS = [
-  "What is the capital of France?",
-  "Explain how API key failover works",
-  "Write a haiku about caching",
-  "Summarize the pros and cons of SQLite",
+const PROMPTS = [
+  ["Explain", "Explain how API key failover works"],
+  ["Create", "Write a haiku about caching"],
+  ["Compare", "Summarize the pros and cons of SQLite"],
+  ["Ask", "What is the capital of France?"],
 ];
 
 const Icon = {
-  bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />,
-  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-  chip: <><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" /></>,
-  db: <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" /></>,
-  send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />,
   plus: <path d="M12 5v14M5 12h14" />,
-  gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></>,
+  send: <path d="M5 12h14M13 6l6 6-6 6" />,
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  close: <path d="M6 6l12 12M18 6 6 18" />,
   alert: <><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></>,
+  paw: <><circle cx="6.5" cy="10" r="1.8" /><circle cx="10.5" cy="6.2" r="1.8" /><circle cx="15" cy="6.8" r="1.8" /><circle cx="18" cy="11" r="1.8" /><path d="M12.2 11.2c-2.4 0-5 2.7-5 5 0 1.6 1.2 2.4 2.7 2.4 1 0 1.5-.4 2.3-.4s1.3.4 2.3.4c1.5 0 2.7-.8 2.7-2.4 0-2.3-2.6-5-5-5Z" /></>,
 };
-const Svg = ({ name, size = 14 }) => (
+const Svg = ({ name, size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {Icon[name]}
   </svg>
@@ -36,30 +34,20 @@ function Metadata({ meta, clientMs }) {
   const cached = meta.resolution_source === "LLM_CACHE";
   return (
     <div className="meta">
-      <span className={`chip source ${cached ? "cache" : "live"}`} data-testid="meta-source">
-        {meta.resolution_source}
-      </span>
-      <span className="chip" title="Model">
-        <Svg name="chip" /> <span data-testid="meta-model">{meta.model}</span>
-      </span>
-      <span className="chip" title="Backend latency (server-measured, from the API response)">
-        <Svg name="clock" /> <span data-testid="meta-latency">{meta.latency_ms} ms</span>
-      </span>
+      <span className={`tag ${cached ? "cache" : "live"}`} data-testid="meta-source">{meta.resolution_source}</span>
+      <span className="kv" title="Model that answered"><em>Model</em><b data-testid="meta-model">{meta.model}</b></span>
+      <span className="kv" title="Backend latency (server-measured, from the API response)"><em>Backend</em><b data-testid="meta-latency">{meta.latency_ms} ms</b></span>
       {clientMs != null && (
-        <span className="chip subtle" title="Client-observed round trip: network + any server wake-up + backend (diagnostic)">
-          client <span data-testid="meta-client-latency">{clientMs} ms</span>
+        <span className="kv" title="Client-observed round trip: network + any server wake-up + backend (diagnostic)">
+          <em>Client</em><b data-testid="meta-client-latency">{clientMs} ms</b>
         </span>
       )}
-      <span className="chip" title="Input tokens (this request)">
-        in <b data-testid="meta-input-tokens">{meta.input_tokens}</b>
-      </span>
-      <span className="chip" title="Output tokens (this request)">
-        out <b data-testid="meta-output-tokens">{meta.output_tokens}</b>
-      </span>
+      <span className="kv" title="Input tokens (this request only)"><em>In</em><b data-testid="meta-input-tokens">{meta.input_tokens}</b></span>
+      <span className="kv" title="Output tokens (this request only)"><em>Out</em><b data-testid="meta-output-tokens">{meta.output_tokens}</b></span>
       {meta.key_id && (
-        <span className="chip subtle" title="API key that answered">
-          {meta.key_id}
-          {meta.fallback_attempts > 0 && ` · ${meta.fallback_attempts} failover${meta.fallback_attempts > 1 ? "s" : ""}`}
+        <span className="kv faint" title="API key that answered">
+          <em>Key</em>
+          <b>{meta.key_id}{meta.fallback_attempts > 0 ? ` · ${meta.fallback_attempts} failover${meta.fallback_attempts > 1 ? "s" : ""}` : ""}</b>
         </span>
       )}
     </div>
@@ -76,7 +64,7 @@ function Pending({ service, retrying }) {
   // Only states the client can actually know: whether the service has been confirmed reachable, and elapsed time.
   const label = service === "ready" ? "Waiting for the model's response…" : "Connecting to AI service…";
   return (
-    <span className="pending">
+    <div className="pending">
       <span className="dots"><i /><i /><i /></span>
       <span className="pending-text">
         {retrying ? "Retrying · " : ""}{label}
@@ -89,7 +77,7 @@ function Pending({ service, retrying }) {
             : "The free server may be waking up — this can take up to a minute."}
         </span>
       )}
-    </span>
+    </div>
   );
 }
 
@@ -106,11 +94,12 @@ export default function App() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [sending, setSending] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [service, setService] = useState("connecting"); // connecting | ready | unreachable
   const endRef = useRef(null);
   const inputRef = useRef(null);
-  const inFlight = useRef(false);      // synchronous guard: state alone could let a fast double-submit through
-  const abortRef = useRef(null);       // controller of the request currently in flight
+  const inFlight = useRef(false);   // synchronous guard against double submits
+  const abortRef = useRef(null);
   const sessionRef = useRef(sessionId);
 
   // One lightweight health check on load (wakes a sleeping free-tier backend). Never polls, never calls the model.
@@ -211,123 +200,147 @@ export default function App() {
     setSending(false);
     setRetrying(false);
     setSessionId(sid);
+    setPanelOpen(false);
     inputRef.current?.focus();
   }
 
+  const replies = messages.filter((m) => m.role === "assistant");
+  const cacheHits = replies.filter((m) => m.meta.resolution_source === "LLM_CACHE").length;
+
   return (
-    <div className="shell">
-      <header className="topbar">
+    <div className="app">
+      <aside className={`side ${panelOpen ? "open" : ""}`}>
         <div className="brand">
-          <div className="logo"><Svg name="bolt" size={18} /></div>
+          <div className="mark"><Svg name="paw" size={20} /></div>
           <div>
-            <h1>Lyftr Chat</h1>
-            <p className="tagline">Resilient LLM gateway · key failover · response caching</p>
+            <h1>Wolf Chat</h1>
+            <p>AI assistant</p>
           </div>
+          <button className="icon-btn side-close" onClick={() => setPanelOpen(false)} aria-label="Close panel"><Svg name="close" /></button>
         </div>
-        <div className="actions">
-          <span className={`service ${service}`} role="status" title="Backend health check (GET /health)">
+
+        <button className="new" onClick={newChat}><Svg name="plus" /> New conversation</button>
+
+        <section className="panel">
+          <h2>Service</h2>
+          <div className={`service ${service}`} role="status" title="Backend health check (GET /health)">
             <i className="svc-dot" /> {SERVICE_TEXT[service]}
-          </span>
-          <span className="session" title="Current session id">
-            <Svg name="db" /> {sessionId}
-          </span>
-          <button className="ghost" onClick={newChat}>
-            <Svg name="plus" /> New chat
-          </button>
-        </div>
-      </header>
+          </div>
+        </section>
 
-      <section className="settings">
-        <label htmlFor="sp"><Svg name="gear" size={12} /> System prompt</label>
-        <input
-          id="sp"
-          data-testid="system-prompt-input"
-          placeholder="Optional — e.g. You are a concise assistant that answers in one sentence."
-          value={systemPrompt}
-          onChange={(e) => setSystemPrompt(e.target.value)}
-        />
-      </section>
+        <section className="panel">
+          <h2>Session</h2>
+          <code className="sid" title="Current session id">{sessionId}</code>
+          <dl className="stats">
+            <div><dt>Replies</dt><dd>{replies.length}</dd></div>
+            <div><dt>From cache</dt><dd>{cacheHits}</dd></div>
+          </dl>
+        </section>
 
-      <main className="thread" aria-live="polite">
-        <div className="thread-inner">
-          {messages.length === 0 && (
-            <div className="hero">
-              <div className="hero-logo"><Svg name="bolt" size={26} /></div>
-              <h2>How can I help you today?</h2>
-              <p>Every reply shows where it came from, which model answered, how long it took, and its token usage.</p>
-              <div className="suggestions">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} className="suggestion" onClick={() => send(s)}>{s}</button>
-                ))}
+        <section className="panel grow">
+          <label htmlFor="sp"><h2>System prompt</h2></label>
+          <textarea
+            id="sp"
+            data-testid="system-prompt-input"
+            rows={4}
+            placeholder="Optional — e.g. You are a concise assistant that answers in one sentence."
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+          />
+          <p className="help">Applies to this conversation.</p>
+        </section>
+
+        <div className="side-foot">FastAPI · LiteLLM · Gemini · SQLite</div>
+      </aside>
+      {panelOpen && <div className="scrim" onClick={() => setPanelOpen(false)} />}
+
+      <section className="main">
+        <header className="mobilebar">
+          <button className="icon-btn" onClick={() => setPanelOpen(true)} aria-label="Open panel"><Svg name="menu" size={20} /></button>
+          <strong>Wolf Chat</strong>
+          <span className={`service mini ${service}`} role="status"><i className="svc-dot" /> {service === "ready" ? "Ready" : service === "connecting" ? "Connecting…" : "Unreachable"}</span>
+        </header>
+
+        <main className="thread" aria-live="polite">
+          <div className="thread-inner">
+            {messages.length === 0 && (
+              <div className="welcome">
+                <p className="eyebrow">New conversation</p>
+                <h2>What can I help you with?</h2>
+                <p className="lead">Every answer shows where it came from, which model produced it, how long it took and its token usage.</p>
+                <ol className="prompts">
+                  {PROMPTS.map(([tag, text]) => (
+                    <li key={text}>
+                      <button onClick={() => send(text)}><span className="ptag">{tag}</span><span>{text}</span><Svg name="send" size={15} /></button>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            </div>
-          )}
+            )}
 
-          {messages.map((m, i) => {
-            if (m.role === "user")
-              return (
-                <div key={i} className="row user">
-                  <div className="bubble user">{m.content}</div>
-                </div>
-              );
-            if (m.role === "error")
-              return (
-                <div key={i} className="row">
-                  <div className="notice" role="alert">
-                    <Svg name="alert" size={16} /> <span>{m.content}</span>
+            {messages.map((m, i) => {
+              if (m.role === "user")
+                return (
+                  <article key={i} className="msg user">
+                    <div className="who">You</div>
+                    <div className="body plain">{m.content}</div>
+                  </article>
+                );
+              if (m.role === "error")
+                return (
+                  <div key={i} className="notice" role="alert">
+                    <Svg name="alert" size={18} />
+                    <span>{m.content}</span>
                     {m.retryText && i === messages.length - 1 && (
-                      <button className="retry" onClick={() => retryLast(m.retryText)} disabled={sending}>
-                        Retry
-                      </button>
+                      <button className="retry" onClick={() => retryLast(m.retryText)} disabled={sending}>Retry</button>
                     )}
                   </div>
-                </div>
+                );
+              return (
+                <article key={i} className="msg assistant" data-testid="assistant-message">
+                  <div className="who"><span className="who-mark"><Svg name="paw" size={13} /></span>Assistant</div>
+                  <div className="body">
+                    <div className="text"><Markdown text={m.content} /></div>
+                    <Metadata meta={m.meta} clientMs={m.clientMs} />
+                  </div>
+                </article>
               );
-            return (
-              <div key={i} className="row">
-                <div className="avatar"><Svg name="bolt" size={14} /></div>
-                <div className="bubble assistant" data-testid="assistant-message">
-                  <div className="text"><Markdown text={m.content} /></div>
-                  <Metadata meta={m.meta} clientMs={m.clientMs} />
-                </div>
-              </div>
-            );
-          })}
+            })}
 
-          {sending && (
-            <div className="row">
-              <div className="avatar"><Svg name="bolt" size={14} /></div>
-              <div className="bubble assistant"><Pending service={service} retrying={retrying} /></div>
-            </div>
-          )}
-          <div ref={endRef} />
-        </div>
-      </main>
+            {sending && (
+              <article className="msg assistant">
+                <div className="who"><span className="who-mark"><Svg name="paw" size={13} /></span>Assistant</div>
+                <div className="body"><Pending service={service} retrying={retrying} /></div>
+              </article>
+            )}
+            <div ref={endRef} />
+          </div>
+        </main>
 
-      <footer className="composer-wrap">
-        <div className="composer">
-          <textarea
-            ref={inputRef}
-            data-testid="chat-input"
-            rows={1}
-            autoFocus
-            placeholder="Message Lyftr Chat…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-          />
-          <button className="send" data-testid="send-button" onClick={() => send()} disabled={sending || !input.trim()} aria-label="Send">
-            <Svg name="send" size={18} />
-            <span>Send</span>
-          </button>
-        </div>
-        <p className="hint">Enter to send · Shift+Enter for a new line</p>
-      </footer>
+        <footer className="composer-wrap">
+          <div className="composer">
+            <textarea
+              ref={inputRef}
+              data-testid="chat-input"
+              rows={1}
+              autoFocus
+              placeholder="Write a message…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+            />
+            <button className="send" data-testid="send-button" onClick={() => send()} disabled={sending || !input.trim()} aria-label="Send">
+              Send <Svg name="send" size={16} />
+            </button>
+          </div>
+          <p className="hint">Enter to send · Shift+Enter for a new line</p>
+        </footer>
+      </section>
     </div>
   );
 }
